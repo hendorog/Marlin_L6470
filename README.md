@@ -10,3 +10,4 @@ Current known limitations/opportunities:
 * Multimotor suppport only implemented for some commands (GetParam, SetParam, Move)
 * Arc support not optimised - the L6470 forces all position moves to complete to zero velocity before the next one can be sent. The result is small blobs at each vertex.
 * Strange bug on startup which requires resets and disconnect/reconnect before the x-axis works correctly.
+* Code size seems large, probably step/dir code can be removed using #defines when using the L6470 vector drivers.

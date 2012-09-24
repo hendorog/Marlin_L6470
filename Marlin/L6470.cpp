@@ -650,6 +650,32 @@ void dSPIN_Run(int device, byte dir, unsigned long spd) {
   dSPIN_Xfer(device, (byte)(spd));
 }
 
+void dSPIN_Run_All(byte dir[], unsigned long spd[]) {
+  byte send_val[MOTOR_COUNT];
+  byte ret_val[MOTOR_COUNT];
+
+  for(int i = 0; i < MOTOR_COUNT; i++) {
+	  send_val[i] = dSPIN_RUN | dir;
+  }
+  dSPIN_Xfer_All(send_val, ret_val);
+
+  for(int i = 0; i < MOTOR_COUNT; i++) {
+	  if (spd[i] > 0xFFFFF) spd[i] = 0xFFFFF;
+	  send_val[i] = (byte)(spd[i] >> 16);
+  }
+  dSPIN_Xfer_All(send_val, ret_val);
+
+  for(int i = 0; i < MOTOR_COUNT; i++) {
+	  send_val[i] = (byte)(spd[i] >> 8);
+  }
+  dSPIN_Xfer_All(send_val, ret_val);
+
+  for(int i = 0; i < MOTOR_COUNT; i++) {
+	  send_val[i] = (byte)(spd[i]);
+  }
+  dSPIN_Xfer_All(send_val, ret_val);
+}
+
 // STEP_CLOCK puts the device in external step clocking mode. When active,
 //  pin 25, STCK, becomes the step clock for the device, and steps it in
 //  the direction (set by the FWD and REV constants) imposed by the call
@@ -968,10 +994,10 @@ void dSPIN_setup()
   //   - dSPIN_SYNC_SEL_x is the ratio of (micro)steps to toggles on the
   //     BUSY/SYNC pin (when that pin is used for SYNC). Make it 1:1, despite
   //     not using that pin.
-  dSPIN_SetParam(MOTOR_X, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_8 | dSPIN_SYNC_SEL_2);
-  dSPIN_SetParam(MOTOR_Y, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_8 | dSPIN_SYNC_SEL_2);
-  dSPIN_SetParam(MOTOR_Z, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_8 | dSPIN_SYNC_SEL_2);
-  dSPIN_SetParam(MOTOR_E, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_8 | dSPIN_SYNC_SEL_2);
+  dSPIN_SetParam(MOTOR_X, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_16 | dSPIN_SYNC_SEL_2);
+  dSPIN_SetParam(MOTOR_Y, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_16 | dSPIN_SYNC_SEL_2);
+  dSPIN_SetParam(MOTOR_Z, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_16 | dSPIN_SYNC_SEL_2);
+  dSPIN_SetParam(MOTOR_E, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_16 | dSPIN_SYNC_SEL_2);
   // Configure the MAX_SPEED register- this is the maximum number of (micro)steps per
   //  second allowed. You'll want to mess around with your desired application to see
   //  how far you can push it before the motor starts to slip. The ACTUAL parameter
@@ -1036,17 +1062,17 @@ void dSPIN_setup()
   //  Hard stop on switch low
   //  16MHz internal oscillator, nothing on output
   dSPIN_SetParam(MOTOR_X, dSPIN_CONFIG, 
-                   dSPIN_CONFIG_PWM_DIV_1 | dSPIN_CONFIG_PWM_MUL_2 | dSPIN_CONFIG_SR_530V_us
+                   dSPIN_CONFIG_PWM_DIV_1 | dSPIN_CONFIG_PWM_MUL_2 | dSPIN_CONFIG_SR_290V_us
   //               | dSPIN_CONFIG_OC_SD_DISABLE | dSPIN_CONFIG_VS_COMP_DISABLE 
                  | dSPIN_CONFIG_SW_HARD_STOP | dSPIN_CONFIG_INT_16MHZ);
   dSPIN_SetParam(MOTOR_Y, dSPIN_CONFIG, 
-                   dSPIN_CONFIG_PWM_DIV_1 | dSPIN_CONFIG_PWM_MUL_2 | dSPIN_CONFIG_SR_530V_us
+                   dSPIN_CONFIG_PWM_DIV_1 | dSPIN_CONFIG_PWM_MUL_2 | dSPIN_CONFIG_SR_290V_us
   //               | dSPIN_CONFIG_OC_SD_DISABLE | dSPIN_CONFIG_VS_COMP_DISABLE 
                  | dSPIN_CONFIG_SW_HARD_STOP | dSPIN_CONFIG_INT_16MHZ);
   dSPIN_SetParam(MOTOR_Z, dSPIN_CONFIG, 
                      dSPIN_CONFIG_PWM_DIV_1 | dSPIN_CONFIG_PWM_MUL_2 | dSPIN_CONFIG_SR_290V_us
 //                   dSPIN_CONFIG_PWM_DIV_1 | dSPIN_CONFIG_PWM_MUL_2 | dSPIN_CONFIG_SR_290V_us
-                 | dSPIN_CONFIG_OC_SD_DISABLE | dSPIN_CONFIG_VS_COMP_DISABLE 
+//                 | dSPIN_CONFIG_OC_SD_DISABLE | dSPIN_CONFIG_VS_COMP_DISABLE
                  | dSPIN_CONFIG_SW_HARD_STOP | dSPIN_CONFIG_INT_16MHZ);
   dSPIN_SetParam(MOTOR_E, dSPIN_CONFIG, 
                    dSPIN_CONFIG_PWM_DIV_1 | dSPIN_CONFIG_PWM_MUL_2 | dSPIN_CONFIG_SR_530V_us

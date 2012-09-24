@@ -1038,7 +1038,7 @@ void st_set_e_position(const long &e)
   CRITICAL_SECTION_END;
 }
 
-long st_get_position(uint8_t axis)
+long st_get_position(uint8_t axis) // Get position in steps ( micro steps) needs to be converted back into mm
 {
 #ifdef TIMER_BASED_STEPPER  
   long count_pos;
@@ -1085,12 +1085,23 @@ static unsigned long step_loss[MOTOR_COUNT];
 static unsigned long step_loss_counter[MOTOR_COUNT];
 static unsigned long thermal_warning_counter[MOTOR_COUNT];
 static unsigned long thermal_shutdown_counter[MOTOR_COUNT];  
+
+boolean L6470_positioning_mode;
+unsigned long start_pos[MOTOR_COUNT];
+unsigned long current_pos[MOTOR_COUNT];
+long L6470_run_mode_error[MOTOR_COUNT]; // <-- Accumulate the error in run mode - which is never going to be accurate for single moves. Signed as error could be -ve or +ve
+
 /*
     Check the status of the L6470 devices via SPI and take appropriate actions
 */
 void dSPIN_monitorStatus() {  
   dSPIN_GetStatus_All(L6470_status); //    <-- Get the status for all of the motors in one call
   
+  if(L6470_positioning_mode) {
+      // Get the current step position for all axis, we need to see if we are finished when in run mode
+      dSPIN_GetParam_All(dSPIN_ABS_POS, start_pos);
+  }
+
   for(int device = 0; device < MOTOR_COUNT; device++) {
     //L6470_status[device] = dSPIN_GetStatus(device);
     
@@ -1170,38 +1181,68 @@ void dSPIN_monitorStatus() {
       }
       
       // *** Busy Status updates *** //
-      
-      if(device == MOTOR_X) {
-        boolean x_busy_temp = dSPIN_IsBusy_Status(L6470_status[device]);
-        x_busy = x_busy_temp;
-        #ifdef STEPPER_DEBUG_BUSY
-          SERIAL_ECHOPAIR("X Busy: ", (unsigned long)x_busy);
-        #endif
-      }
-      
-      if(device == MOTOR_Y) {
-        boolean y_busy_temp = dSPIN_IsBusy_Status(L6470_status[device]);
-        y_busy = y_busy_temp;
-        #ifdef STEPPER_DEBUG_BUSY
-          SERIAL_ECHOPAIR("Y Busy: ", (unsigned long)y_busy);
-        #endif
-      }
+      if(L6470_positioning_mode) { // are we going to a position or running forever at a given speed.
+		  if(device == MOTOR_X) {
+			boolean x_busy_temp = dSPIN_IsBusy_Status(L6470_status[device]);
+			x_busy = x_busy_temp;
+			L6470_run_mode_error[MOTOR_X] = 0L;
 
-      if(device == MOTOR_Z) {
-        boolean z_busy_temp = dSPIN_IsBusy_Status(L6470_status[device]);
-        z_busy = z_busy_temp;
-        #ifdef STEPPER_DEBUG_BUSY
-          SERIAL_ECHOPAIR("Z Busy: ", (unsigned long)z_busy);
-        #endif
-      }
+			#ifdef STEPPER_DEBUG_BUSY
+			  SERIAL_ECHOPAIR("X Busy: ", (unsigned long)x_busy);
+			#endif
+		  }
 
-      if(device == MOTOR_E) {
-        boolean e_busy_temp = dSPIN_IsBusy_Status(L6470_status[device]);
-        e_busy = e_busy_temp;
-        #ifdef STEPPER_DEBUG_BUSY
-          SERIAL_ECHOPAIR("E Busy: ", (unsigned long)e_busy);
-        #endif
-      } 
+		  if(device == MOTOR_Y) {
+			boolean y_busy_temp = dSPIN_IsBusy_Status(L6470_status[device]);
+			y_busy = y_busy_temp;
+			#ifdef STEPPER_DEBUG_BUSY
+			  SERIAL_ECHOPAIR("Y Busy: ", (unsigned long)y_busy);
+			#endif
+		  }
+
+		  if(device == MOTOR_Z) {
+			boolean z_busy_temp = dSPIN_IsBusy_Status(L6470_status[device]);
+			z_busy = z_busy_temp;
+			#ifdef STEPPER_DEBUG_BUSY
+			  SERIAL_ECHOPAIR("Z Busy: ", (unsigned long)z_busy);
+			#endif
+		  }
+
+		  if(device == MOTOR_E) {
+			boolean e_busy_temp = dSPIN_IsBusy_Status(L6470_status[device]);
+			e_busy = e_busy_temp;
+			#ifdef STEPPER_DEBUG_BUSY
+			  SERIAL_ECHOPAIR("E Busy: ", (unsigned long)e_busy);
+			#endif
+		  }
+      	} else { // Run mode not motion control
+  			unsigned long steps = current_pos[device] - start_pos[device];
+      		if(device == MOTOR_X) {
+      			if(((abs(steps) - current_block->steps_x) < X_MICROSTEPS) || (steps > current_block->steps_x)) { // <-- near enough to call it finished
+      	  			L6470_run_mode_error[device] += steps;
+      				x_busy = false;
+      			}
+      		}
+      		if(device == MOTOR_Y) {
+      			if(((abs(steps) - current_block->steps_y) < Y_MICROSTEPS) || (steps > current_block->steps_y)) { // <-- near enough to call it finished
+      				L6470_run_mode_error[device] += steps;
+      				y_busy = false;
+      			}
+      		}
+      		if(device == MOTOR_Z) {
+      			if(((abs(steps) - current_block->steps_z) < Z_MICROSTEPS) || (steps > current_block->steps_z)) { // <-- near enough to call it finished
+      				L6470_run_mode_error[device] += steps;
+      				z_busy = false;
+      			}
+      		}
+      		if(device == MOTOR_E) {
+      			if(((abs(steps) - current_block->steps_e) < E_MICROSTEPS) || (steps > current_block->steps_e)) { // <-- near enough to call it finished
+      				L6470_run_mode_error[device] += steps;
+      				e_busy = false;
+      			}
+      		}
+
+      	}
       
       // *** Thermal shutdown action **** //
       if(!L6470_status[device] & dSPIN_STATUS_TH_SD ) {
@@ -1259,7 +1300,6 @@ void dSPIN_monitorStatus() {
   }
 }
 
-unsigned long steps[MOTOR_COUNT];
 byte dir[MOTOR_COUNT];
 unsigned long min_speed[MOTOR_COUNT];
 unsigned long max_speed[MOTOR_COUNT];
@@ -1369,8 +1409,10 @@ void manage_L6470() {
              SERIAL_ECHOLN("Endstop check disabled.");
            }
            #endif
-        
-        
+
+           // Get the current step position for all axis
+           dSPIN_GetParam_All(dSPIN_ABS_POS, start_pos);
+
           for(int i = 0; i < MOTOR_COUNT; i++) {
             if(i == MOTOR_X) {
               steps[i] = current_block->steps_x;
@@ -1403,14 +1445,21 @@ void manage_L6470() {
               max_speed[i] = MaxSpdCalc(current_block->rate_e);
               accel[i] = AccCalc(current_block->accel_e * 1.1);      // <-- Accel slightly faster to bias the extrustion towards the start of the movement. This helps avoid the extruder running too long which seems to occur at slower feed rates.
               decel[i] = DecCalc(current_block->accel_e);
-            }            
+            }
           }
+		  //dSPIN_SetParam_All(dSPIN_MIN_SPEED, min_speed); <-- This doesn't work atm
+		  dSPIN_SetParam_All(dSPIN_ACC, accel, param_result);
+		  dSPIN_SetParam_All(dSPIN_DEC, decel, param_result);
           
-          //dSPIN_SetParam_All(dSPIN_MIN_SPEED, min_speed); <-- This doesn't work atm
-          dSPIN_SetParam_All(dSPIN_MAX_SPEED, max_speed, param_result);
-          dSPIN_SetParam_All(dSPIN_ACC, accel, param_result);
-          dSPIN_SetParam_All(dSPIN_DEC, decel, param_result);
-          dSPIN_Move_All(dir, steps);                // <-- This is what makes the motors move         
+          // If this is a short move, then there are probably more short moves to follow.
+          // Therefore try to avoid stopping, this method is less accurate, but means the the moves don't stop
+          if(current_block->millimeters < SHORT_MOVE_MM) {
+        	  L6470_run_mode = true;
+        	  dSPIN_Run_All(dir, max_speed);
+          } else {
+        	  L6470_run_mode = false;
+    		  dSPIN_SetParam_All(dSPIN_MAX_SPEED, max_speed, param_result);
+			  dSPIN_Move_All(dir, steps);                // <-- This is what makes the motors move
             
           CRITICAL_SECTION_START;
           L6470_load_move = false;
@@ -1455,6 +1504,3 @@ void manage_L6470() {
     }  // if current_block != NULL
   } // if steppers_enabled    
 }
-    
-
-

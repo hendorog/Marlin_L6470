@@ -43,6 +43,7 @@
 // turn on serial debugging for stepper motors
 #define STEPPER_DEBUG
 //#define STEPPER_DEBUG_BUSY
+//#define RUN_MODE
 
 //===========================================================================
 //=============================Thermal Settings  ============================
@@ -122,10 +123,15 @@
 //    #define  DEFAULT_Ki 2.08  
 //    #define  DEFAULT_Kd 114  
 
-// Results from autotune:
-#define DEFAULT_Kp 19.96
-#define  DEFAULT_Ki 2.14
-#define  DEFAULT_Kd 46.43
+// Results from autotune new extruder:
+//#define DEFAULT_Kp 19.96
+//#define  DEFAULT_Ki 2.14
+//#define  DEFAULT_Kd 46.43
+
+// Results from autotune rebuilt extruder
+#define DEFAULT_Kp 23.07
+#define DEFAULT_Ki 1.30
+#define DEFAULT_Kd 102.04
 // Makergear
 //    #define  DEFAULT_Kp 7.0
 //    #define  DEFAULT_Ki 0.1  
@@ -143,7 +149,7 @@
 //if PREVENT_DANGEROUS_EXTRUDE is on, you can still disable (uncomment) very long bits of extrusion separately.
 #define PREVENT_LENGTHY_EXTRUDE
 
-#define EXTRUDE_MINTEMP 170
+#define EXTRUDE_MINTEMP 160
 #define EXTRUDE_MAXLENGTH (X_MAX_LENGTH+Y_MAX_LENGTH) //prevent extrusion of very large distances.
 
 //===========================================================================
@@ -227,20 +233,21 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 
 //// MOVEMENT SETTINGS
 #define NUM_AXIS 4 // The axis order in all axis related arrays is X, Y, Z, E
-#define HOMING_FEEDRATE {200, 200, 10, 0}  // set the homing speeds (mm/min)
+#define HOMING_FEEDRATE {150, 150, 10, 0}  // set the homing speeds (mm/min)
 
 // default settings 
 // Steps 400, Microsteps 32 = 12800 step per rev. Pulley is 10mm so 31.4159 mm per rev. 407.43 steps per mm
 //#define DEFAULT_AXIS_STEPS_PER_UNIT   {78.7402,78.7402,200*8/3,760*1.1}  // default steps per unit for ultimaker 
 //#define DEFAULT_AXIS_STEPS_PER_UNIT   {76, 105, 2470, 480}  // default steps per unit for ultimaker 
 //#define DEFAULT_AXIS_STEPS_PER_UNIT   {76*20/18.55, 76*20/18.55, 2470, 308}  // default steps per unit for ultimaker 
-#define X_MICROSTEPS 32			//<-- This stepper is 400 per rev
-#define Y_MICROSTEPS 32			//<-- This stepper is 400 per rev
-#define Z_MICROSTEPS 32			//<-- This stepper is 400 per rev
-#define E_MICROSTEPS 64 		//<-- This stepper is 200 per rev
-#define DEFAULT_AXIS_STEPS_PER_UNIT   {76*20/18.55 * X_MICROSTEPS/8, 76*20/18.55 * Y_MICROSTEPS/8, 2470 * Z_MICROSTEPS/8, 424 * E_MICROSTEPS/8}  // default steps per unit for ultimaker
-#define DEFAULT_MAX_FEEDRATE          {120, 120, 0.25, 1.5}    // Maximum speeds per axis in mm/sec
-#define DEFAULT_MAX_ACCELERATION      {15, 15, 1.0, 100}    // X, Y, Z, E maximum acceleration in mm/sec/sec. E default values are good for skeinforge 40+, for older versions raise them a lot.
+#define X_MICROSTEPS 8			//<-- This stepper is 400 per rev
+#define Y_MICROSTEPS 8			//<-- This stepper is 400 per rev
+#define Z_MICROSTEPS 8			//<-- This stepper is 400 per rev
+#define E_MICROSTEPS 8 		//<-- This stepper is 200 per rev
+#define DEFAULT_AXIS_STEPS_PER_UNIT   {76*20/18.55 * X_MICROSTEPS/8, 76*20/18.55 * Y_MICROSTEPS/8, 2470 * Z_MICROSTEPS / 8, 424 * E_MICROSTEPS/8}  
+#define DEFAULT_MAX_FEEDRATE          {100, 100, 0.25, 1.0}    // Maximum speeds per axis in mm/sec
+// WORKING AT 8 MICROSTEPS: {10, 10, 1.0, 100}
+#define DEFAULT_MAX_ACCELERATION      {10, 10, 1.0, 100}    // X, Y, Z, E maximum acceleration in mm/sec/sec. E default values are good for skeinforge 40+, for older versions raise them a lot.
 //#define DEFAULT_MAX_ACCELERATION      {15000,15000,1000,10000}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for skeinforge 40+, for older versions raise them a lot.
 
 #define DEFAULT_ACCELERATION          20    // X, Y, Z and E max acceleration in mm/s^2 for printing moves 
@@ -256,7 +263,7 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 #define DEFAULT_ZJERK                 0.0     // (mm/sec)
 #define DEFAULT_EJERK                 0.0    // (mm/sec)
 
-#define SHORT_MOVE					   5.0		// anything shorter than this is sent as a Run instead of an absolute position move. Run moves will avoid stopping and so make smooth curves
+#define SHORT_MOVE_MM					   5.0		// anything shorter than this is sent as a Run instead of an absolute position move. Run moves will avoid stopping and so make smooth curves
 
 //===========================================================================
 //=============================Additional Features===========================

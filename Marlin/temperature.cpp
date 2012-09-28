@@ -679,6 +679,7 @@ void tp_init()
 #endif //BED_MAXTEMP
 }
 
+
 void setWatch() 
 {  
 #ifdef WATCHPERIOD

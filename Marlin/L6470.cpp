@@ -40,6 +40,18 @@ unsigned long MaxSpdCalc(float stepsPerSec)
   else return (unsigned long) long(temp);
 }
 
+// The value in the Max Run Speed parameter is [(steps/s)*(tick)]/(2^-28) where tick is 
+//  250ns (datasheet value)- 0x041 on boot.
+// Multiply desired steps/s by .065536 to get an appropriate value for this register
+// This is a 20-bit value, so we need to make sure it remains at or below 0x3FFFF
+unsigned long MaxRunSpdCalc(float stepsPerSec)
+{
+  float temp = stepsPerSec * 67.108864;
+  if( (unsigned long) long(temp) > 0x0003FFFF) return 0x0003FFFF;
+  else return (unsigned long) long(temp);
+}
+
+
 // The value in the MIN_SPD register is [(steps/s)*(tick)]/(2^-24) where tick is 
 //  250ns (datasheet value)- 0x000 on boot.
 // Multiply desired steps/s by 4.1943 to get an appropriate value for this register
@@ -655,7 +667,7 @@ void dSPIN_Run_All(byte dir[], unsigned long spd[]) {
   byte ret_val[MOTOR_COUNT];
 
   for(int i = 0; i < MOTOR_COUNT; i++) {
-	  send_val[i] = dSPIN_RUN | dir;
+	  send_val[i] = dSPIN_RUN | dir[i];
   }
   dSPIN_Xfer_All(send_val, ret_val);
 
@@ -816,6 +828,15 @@ void dSPIN_ResetDev(int device) {
 // Bring the motor to a halt using the deceleration curve.
 void dSPIN_SoftStop(int device) {
   dSPIN_Xfer(device, dSPIN_SOFT_STOP);
+}
+
+byte softStop_temp[MOTOR_COUNT];
+void dSPIN_SoftStop_All() {
+  byte send_val[MOTOR_COUNT];
+  for(int i = 0; i < MOTOR_COUNT; i++) {
+    send_val[i] = dSPIN_SOFT_STOP;
+  }
+  dSPIN_Xfer_All(send_val, softStop_temp);
 }
 
 // Stop the motor with infinite deceleration.
@@ -994,20 +1015,20 @@ void dSPIN_setup()
   //   - dSPIN_SYNC_SEL_x is the ratio of (micro)steps to toggles on the
   //     BUSY/SYNC pin (when that pin is used for SYNC). Make it 1:1, despite
   //     not using that pin.
-  dSPIN_SetParam(MOTOR_X, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_16 | dSPIN_SYNC_SEL_2);
-  dSPIN_SetParam(MOTOR_Y, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_16 | dSPIN_SYNC_SEL_2);
-  dSPIN_SetParam(MOTOR_Z, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_16 | dSPIN_SYNC_SEL_2);
-  dSPIN_SetParam(MOTOR_E, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_16 | dSPIN_SYNC_SEL_2);
+  dSPIN_SetParam(MOTOR_X, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_8 | dSPIN_SYNC_SEL_2);
+  dSPIN_SetParam(MOTOR_Y, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_8 | dSPIN_SYNC_SEL_2);
+  dSPIN_SetParam(MOTOR_Z, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_8 | dSPIN_SYNC_SEL_2);
+  dSPIN_SetParam(MOTOR_E, dSPIN_STEP_MODE, !dSPIN_SYNC_EN | dSPIN_STEP_SEL_1_8 | dSPIN_SYNC_SEL_2);
   // Configure the MAX_SPEED register- this is the maximum number of (micro)steps per
   //  second allowed. You'll want to mess around with your desired application to see
   //  how far you can push it before the motor starts to slip. The ACTUAL parameter
   //  passed to this function is in steps/tick; MaxSpdCalc() will convert a number of
   //  steps/s into an appropriate value for this function. Note that for any move or
   //  goto type function where no speed is specified, this value will be used.
-  dSPIN_SetParam(MOTOR_X, dSPIN_MAX_SPEED, MaxSpdCalc(500)); // Max speed is written for every move. So the figure here doesn't matter
-  dSPIN_SetParam(MOTOR_Y, dSPIN_MAX_SPEED, MaxSpdCalc(500));
-  dSPIN_SetParam(MOTOR_Z, dSPIN_MAX_SPEED, MaxSpdCalc(500));
-  dSPIN_SetParam(MOTOR_E, dSPIN_MAX_SPEED, MaxSpdCalc(500));
+  dSPIN_SetParam(MOTOR_X, dSPIN_MAX_SPEED, MaxSpdCalc(5000)); // Max speed is written for every move. So the figure here doesn't matter
+  dSPIN_SetParam(MOTOR_Y, dSPIN_MAX_SPEED, MaxSpdCalc(5000));
+  dSPIN_SetParam(MOTOR_Z, dSPIN_MAX_SPEED, MaxSpdCalc(5000));
+  dSPIN_SetParam(MOTOR_E, dSPIN_MAX_SPEED, MaxSpdCalc(5000));
 
   /* Causes tricky issues to solve, beware
   float axis_steps_per_unit[]=DEFAULT_AXIS_STEPS_PER_UNIT;
@@ -1016,6 +1037,12 @@ void dSPIN_setup()
   dSPIN_SetParam(MOTOR_Z, dSPIN_MIN_SPEED, MinSpdCalc(DEFAULT_ZJERK * axis_steps_per_unit[MOTOR_Z]));
   dSPIN_SetParam(MOTOR_E, dSPIN_MIN_SPEED, MinSpdCalc(DEFAULT_EJERK * axis_steps_per_unit[MOTOR_E]));
   */
+  
+  dSPIN_SetParam(MOTOR_X, dSPIN_MIN_SPEED, MinSpdCalc(0));
+  dSPIN_SetParam(MOTOR_Y, dSPIN_MIN_SPEED, MinSpdCalc(0));
+  dSPIN_SetParam(MOTOR_Z, dSPIN_MIN_SPEED, MinSpdCalc(0));
+  dSPIN_SetParam(MOTOR_E, dSPIN_MIN_SPEED, MinSpdCalc(0));
+  
   // Configure the FS_SPD register- this is the speed at which the driver ceases
   //  microstepping and goes to full stepping. FSCalc() converts a value in steps/s
   //  to a value suitable for this register; to disable full-step switching, you
@@ -1099,8 +1126,8 @@ void dSPIN_setup()
 //  dSPIN_SetParam(dSPIN_FN_SLP_DEC, 0xb);  //0xb
 
   dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_HOLD, 0x28);  //0xa
-  dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_ACC, 0x38);  // 0xb
-  dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_DEC, 0x30);  // 0xb
+  dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_ACC, 0x3b);  // 0xb
+  dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_DEC, 0x34);  // 0xb
   dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_RUN, 0x28);  // 0xb
   dSPIN_SetParam(MOTOR_X, dSPIN_ST_SLP, 0x6);     // 0x5
   dSPIN_SetParam(MOTOR_X, dSPIN_INT_SPD, 0x165a);  // this should be 0x1c50 according to bemf cacl
@@ -1108,8 +1135,8 @@ void dSPIN_setup()
   dSPIN_SetParam(MOTOR_X, dSPIN_FN_SLP_DEC, 0x1d);  //0xb
 
   dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_HOLD, 0x30);  //0xa
-  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_ACC, 0x38);  // 0xb
-  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_DEC, 0x30);  // 0xb
+  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_ACC, 0x3b);  // 0xb
+  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_DEC, 0x34);  // 0xb
   dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_RUN, 0x30);  // 0xb
   dSPIN_SetParam(MOTOR_Y, dSPIN_ST_SLP, 0x6);     // 0x5
   dSPIN_SetParam(MOTOR_Y, dSPIN_INT_SPD, 0x165a);  // this should be 0x1c50 according to bemf cacl

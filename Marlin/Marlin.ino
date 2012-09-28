@@ -328,7 +328,8 @@ void setup()
   {
     axis_steps_per_sqr_second[i] = max_acceleration_units_per_sq_second[i] * axis_steps_per_unit[i];
   }
-  
+
+
   tp_init();    // Initialize temperature loop 
   plan_init();  // Initialize planner;
   st_init();    // Initialize stepper;
@@ -366,6 +367,13 @@ void setup()
         SERIAL_ECHOLN("E: NOT Busy");
 
 
+  /*
+  unsigned long motor_speed[MOTOR_COUNT] = {5000, 5000, 0, 0};
+  byte dir[MOTOR_COUNT] = {REV, REV, 0, 0};
+  dSPIN_Run_All(dir, motor_speed);
+  delay(1000);
+  dSPIN_SoftStop_All();
+  */
   /*
   unsigned long result[MOTOR_COUNT];
   SERIAL_ECHOLN("Getting param 1:")

@@ -310,11 +310,14 @@ void dSPIN_GetParam_All(byte param, unsigned long result[]);
 void dSPIN_Move_All(byte dir[], unsigned long n_step[]);
 void dSPIN_GetStatus_All(unsigned int result[]);
 void dSPIN_Run_All(byte dir[], unsigned long spd[]);
+void dSPIN_SoftStop_All();
 
 unsigned long AccCalc(float stepsPerSecPerSec);
 unsigned long DecCalc(float stepsPerSecPerSec);
 unsigned long MaxSpdCalc(float stepsPerSec);
 unsigned long MinSpdCalc(float stepsPerSec);
+
+unsigned long MaxRunSpdCalc(float stepsPerSec);
 
 static unsigned long zero_array[MOTOR_COUNT] = {0,0,0,0};  
 static byte zero_byte_array[MOTOR_COUNT] = {0,0,0,0};  

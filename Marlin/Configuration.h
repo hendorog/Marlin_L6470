@@ -13,8 +13,9 @@
 
 // This determines the communication speed of the printer
 //#define BAUDRATE 250000
-#define BAUDRATE 115200
-//#define BAUDRATE 38400
+//#define BAUDRATE 115200
+#define BAUDRATE 38400
+//#define BAUDRATE 57600
 
 //// The following define selects which electronics board you have. Please choose the one that matches your setup
 // Gen7 custom (Alfons3 Version) = 10 "https://github.com/Alfons3/Generation_7_Electronics"
@@ -41,7 +42,7 @@
 //#define TIMER_BASED_STEPPER
 
 // turn on serial debugging for stepper motors
-#define STEPPER_DEBUG
+//#define STEPPER_DEBUG
 //#define STEPPER_DEBUG_BUSY
 //#define RUN_MODE
 
@@ -129,7 +130,9 @@
 //#define  DEFAULT_Kd 46.43
 
 // Results from autotune rebuilt extruder
-#define DEFAULT_Kp 23.07
+// M302 P23.07 I1.30 D102.04
+//#define DEFAULT_Kp 23.07
+#define DEFAULT_Kp 28.07
 #define DEFAULT_Ki 1.30
 #define DEFAULT_Kd 102.04
 // Makergear
@@ -199,8 +202,8 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 #define DISABLE_Z false
 #define DISABLE_E false // For all extruders
 
-#define INVERT_X_DIR false    // for Mendel set to false, for Orca set to true
-#define INVERT_Y_DIR false    // for Mendel set to true, for Orca set to false
+#define INVERT_X_DIR true    // for Mendel set to false, for Orca set to true. Needs to be inverted as we need the ABS_POS register to increase when moving away from Home position
+#define INVERT_Y_DIR true    // for Mendel set to true, for Orca set to false. Needs to be inverted as we need the ABS_POS register to increase when moving away from Home position
 #define INVERT_Z_DIR false     // for Mendel set to false, for Orca set to true
 #define INVERT_E0_DIR true   // for direct drive extruder v9 set to true, for geared extruder set to false
 #define INVERT_E1_DIR false    // for direct drive extruder v9 set to true, for geared extruder set to false
@@ -215,9 +218,9 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 #define min_software_endstops false //If true, axis won't move to coordinates less than HOME_POS.
 #define max_software_endstops true  //If true, axis won't move to coordinates greater than the defined lengths below.
 // Travel limits after homing in mm?
-#define X_MAX_POS 195
+#define X_MAX_POS 205
 #define X_MIN_POS 0
-#define Y_MAX_POS 310
+#define Y_MAX_POS 300
 #define Y_MIN_POS 0
 #define Z_MAX_POS 190
 #define Z_MIN_POS 0
@@ -233,37 +236,40 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 
 //// MOVEMENT SETTINGS
 #define NUM_AXIS 4 // The axis order in all axis related arrays is X, Y, Z, E
-#define HOMING_FEEDRATE {150, 150, 10, 0}  // set the homing speeds (mm/min)
+#define HOMING_FEEDRATE {3000.0 * 8/X_MICROSTEPS, 3000.0 * 8/Y_MICROSTEPS, 100.0 * 8/Z_MICROSTEPS, 0.0 * 8/E_MICROSTEPS}  // set the homing speeds (mm/min)
 
 // default settings 
 // Steps 400, Microsteps 32 = 12800 step per rev. Pulley is 10mm so 31.4159 mm per rev. 407.43 steps per mm
 //#define DEFAULT_AXIS_STEPS_PER_UNIT   {78.7402,78.7402,200*8/3,760*1.1}  // default steps per unit for ultimaker 
 //#define DEFAULT_AXIS_STEPS_PER_UNIT   {76, 105, 2470, 480}  // default steps per unit for ultimaker 
 //#define DEFAULT_AXIS_STEPS_PER_UNIT   {76*20/18.55, 76*20/18.55, 2470, 308}  // default steps per unit for ultimaker 
-#define X_MICROSTEPS 8			//<-- This stepper is 400 per rev
-#define Y_MICROSTEPS 8			//<-- This stepper is 400 per rev
-#define Z_MICROSTEPS 8			//<-- This stepper is 400 per rev
-#define E_MICROSTEPS 8 		//<-- This stepper is 200 per rev
-#define DEFAULT_AXIS_STEPS_PER_UNIT   {76*20/18.55 * X_MICROSTEPS/8, 76*20/18.55 * Y_MICROSTEPS/8, 2470 * Z_MICROSTEPS / 8, 424 * E_MICROSTEPS/8}  
-#define DEFAULT_MAX_FEEDRATE          {100, 100, 0.25, 1.0}    // Maximum speeds per axis in mm/sec
+#define X_MICROSTEPS 8.0			//<-- This stepper is 400 per rev
+#define Y_MICROSTEPS 8.0  			//<-- This stepper is 400 per rev
+#define Z_MICROSTEPS 8.0 		//<-- This stepper is 400 per rev
+#define E_MICROSTEPS 8.0 		//<-- This stepper is 400 per rev
+//#define DEFAULT_AXIS_FULLSTEPS_PER_UNIT   {80.0 * 20.0/21.0/8, 80.0/8, 2560.0/8, 324.0 * 2 * 40/31/8}  
+#define DEFAULT_AXIS_FULLSTEPS_PER_UNIT   {80.0/8.0, 80.0/8.0, 2560.0/8.0, 324.0 * 2 * 40.0/31.0/8.0 * 2.0}  
+//#define DEFAULT_AXIS_STEPS_PER_UNIT   {80.0 * 20.0/21.0 * X_MICROSTEPS/8, 80 * Y_MICROSTEPS/8, 2560.0 * Z_MICROSTEPS / 8, 324.0 * 2 * 40/31 * E_MICROSTEPS/8}  
+#define DEFAULT_AXIS_STEPS_PER_UNIT   {80.0 * X_MICROSTEPS/8.0, 80 * Y_MICROSTEPS/8.0, 2560.0 * Z_MICROSTEPS / 8.0, 324.0 * 2 * 40.0/31.0 * E_MICROSTEPS/8.0 * 2.0}  
+#define DEFAULT_MAX_FEEDRATE          {3000.0 * 8.0/X_MICROSTEPS, 3000.0 * 8.0/Y_MICROSTEPS, 2.5 * 8.0/Z_MICROSTEPS, 5.0 * 8.0/E_MICROSTEPS}    // Maximum speeds per axis in mm/sec
 // WORKING AT 8 MICROSTEPS: {10, 10, 1.0, 100}
-#define DEFAULT_MAX_ACCELERATION      {10, 10, 1.0, 100}    // X, Y, Z, E maximum acceleration in mm/sec/sec. E default values are good for skeinforge 40+, for older versions raise them a lot.
+#define DEFAULT_MAX_ACCELERATION      {1000.0 * 8.0/X_MICROSTEPS, 1000.0 * 8.0/Y_MICROSTEPS, 40.0 * 8.0/Z_MICROSTEPS, 25.0 * 8.0/E_MICROSTEPS}    // X, Y, Z, E maximum acceleration in mm/sec/sec. E default values are good for skeinforge 40+, for older versions raise them a lot.
 //#define DEFAULT_MAX_ACCELERATION      {15000,15000,1000,10000}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for skeinforge 40+, for older versions raise them a lot.
 
-#define DEFAULT_ACCELERATION          20    // X, Y, Z and E max acceleration in mm/s^2 for printing moves 
+#define DEFAULT_ACCELERATION          700.0 * 8.0/X_MICROSTEPS     // X, Y, Z and E max acceleration in mm/s^2 for printing moves 
 //#define DEFAULT_RETRACT_ACCELERATION  500   // X, Y, Z and E max acceleration in mm/s^2 for r retracts
-#define DEFAULT_RETRACT_ACCELERATION  20   // X, Y, Z and E max acceleration in mm/s^2 for r retracts
+#define DEFAULT_RETRACT_ACCELERATION  25.0 * 8.0/E_MICROSTEPS   // X, Y, Z and E max acceleration in mm/s^2 for r retracts
 
 // 
 //#define DEFAULT_XYJERK                20.0    // (mm/sec)
 //#define DEFAULT_ZJERK                 0.4     // (mm/sec)
 //#define DEFAULT_EJERK                 5.0    // (mm/sec)
 
-#define DEFAULT_XYJERK                0.0    // (mm/sec)
+#define DEFAULT_XYJERK                0.5    // (mm/sec)
 #define DEFAULT_ZJERK                 0.0     // (mm/sec)
-#define DEFAULT_EJERK                 0.0    // (mm/sec)
+#define DEFAULT_EJERK                 0.5    // (mm/sec)
 
-#define SHORT_MOVE_MM					   5.0		// anything shorter than this is sent as a Run instead of an absolute position move. Run moves will avoid stopping and so make smooth curves
+//#define SHORT_MOVE_MM					   5.0		// anything shorter than this is sent as a Run instead of an absolute position move. Run moves will avoid stopping and so make smooth curves
 
 //===========================================================================
 //=============================Additional Features===========================

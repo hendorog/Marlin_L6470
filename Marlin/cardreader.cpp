@@ -143,7 +143,7 @@ void CardReader::initsd()
   cardOK = false;
   if(root.isOpen())
     root.close();
-  if (!card.init(SPI_FULL_SPEED,SDSS))
+  if (!card.init(SPI_HALF_SPEED,SDSS))
   {
     //if (!card.init(SPI_HALF_SPEED,SDSS))
     SERIAL_ECHO_START;

@@ -98,7 +98,7 @@
 
 #define AXIS_RELATIVE_MODES {false, false, false, false}
 
-#define MAX_STEP_FREQUENCY 40000 // Max step frequency for Ultimaker (5000 pps / half step)
+//#define MAX_STEP_FREQUENCY 40000 // Max step frequency for Ultimaker (5000 pps / half step)
 
 //By default pololu step drivers require an active high signal. However, some high power drivers require an active low signal as step.
 #define INVERT_X_STEP_PIN false
@@ -126,7 +126,7 @@
 // Minimum planner junction speed. Sets the default minimum speed the planner plans for at the end
 // of the buffer and all stops. This should not be much greater than zero and should only be changed
 // if unwanted behavior is observed on a user's machine when running at very slow speeds.
-#define MINIMUM_PLANNER_SPEED 0.00// (mm/sec)
+#define MINIMUM_PLANNER_SPEED 0.05// (mm/sec)
 
 //===========================================================================
 //=============================Additional Features===========================
@@ -175,7 +175,7 @@ const int dropsegments=5; //everything with less than this number of steps will 
 // You can get round this by connecting a push button or single throw switch to the pin defined as SDCARDCARDDETECT 
 // in the pins.h file.  When using a push button pulling the pin to ground this will need inverted.  This setting should
 // be commented out otherwise
-#define SDCARDDETECTINVERTED 
+//#define SDCARDDETECTINVERTED 
 
 #ifdef ULTIPANEL
  #undef SDCARDDETECTINVERTED
@@ -189,14 +189,14 @@ const int dropsegments=5; //everything with less than this number of steps will 
 #if defined SDSUPPORT
   #define BLOCK_BUFFER_SIZE 16   // SD,LCD,Buttons take more memory, block buffer needs to be smaller
 #else
-  #define BLOCK_BUFFER_SIZE 16 // maximize block buffer
+  #define BLOCK_BUFFER_SIZE 32 // maximize block buffer
 #endif
 
 
 //The ASCII buffer for recieving from the serial:
 #define MAX_CMD_SIZE 96
-#define BUFSIZE 4
-//#define BUFSIZE 40
+//#define BUFSIZE 4
+#define BUFSIZE 20
 
 
 // Firmware based and LCD controled retract

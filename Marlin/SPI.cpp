@@ -34,7 +34,7 @@ void SPIClass::begin() {
 //  digitalWrite(MOSI, LOW);
     WRITE(L6470_MOSI, LOW);
 //  digitalWrite(SS, HIGH);
-    WRITE(L6470_SS, HIGH);
+    WRITE(L6470_SS , HIGH);
 
   // Warning: if the SS pin ever becomes a LOW INPUT then SPI 
   // automatically switches to Slave, so the data direction of 

@@ -783,7 +783,7 @@ void process_commands()
       
       #if Z_HOME_DIR > 0                      // If homing away from BED do Z first
       if((home_all_axis) || (code_seen(axis_codes[Z_AXIS]))) {
-        HOMEAXIS(Z);
+        //HOMEAXIS(Z);
       }
       #endif
       
@@ -823,7 +823,7 @@ void process_commands()
       
       #if Z_HOME_DIR < 0                      // If homing towards BED do Z last
       if((home_all_axis) || (code_seen(axis_codes[Z_AXIS]))) {
-        HOMEAXIS(Z);
+        //HOMEAXIS(Z);
       }
       #endif
       

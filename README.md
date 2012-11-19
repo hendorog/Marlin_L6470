@@ -12,5 +12,9 @@ Both making a single write to a particular device, and writing to all devices at
 Current known limitations/opportunities:
 * Multimotor suppport only implemented for some commands (GetParam, SetParam, Move)
 * Arc support not optimised - the L6470 forces all position moves to complete to zero velocity before the next one can be sent. The result is small blobs at each vertex.
-* Strange bug on startup which requires resets and disconnect/reconnect before the x-axis works correctly.
-* Code size seems large, probably step/dir code can be removed using #defines when using the L6470 vector drivers.
+* X and Y axis need to be off the home switch when resetting/powering on
+* Code size seems large, most step/dir code has been removed using #defines when using the L6470 vector drivers.
+* Very hacky code, code written to make it work, not to make it pretty
+* The resolution of the motor velocity parameter in the 6470 Move command is not very high. This causes 'glitches' at the end of long lines. It might be fixable using the Run command instead as it allows the velocity to be specified more accurately.
+
+Currently implementing run_mode, which enables smooth arcs as stopping is avoided.

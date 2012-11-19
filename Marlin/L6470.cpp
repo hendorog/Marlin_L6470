@@ -13,20 +13,22 @@
 //  250ns (datasheet value)- 0x08A on boot.
 // Multiply desired steps/s/s by .137438 to get an appropriate value for this register.
 // This is a 12-bit value, so we need to make sure the value is at or below 0xFFF.
-unsigned long AccCalc(float stepsPerSecPerSec)
-{
-  float temp = stepsPerSecPerSec * 0.137438;
+// Changed constant to 0.068719476736 after post on sparkfun site by Nick Gammon
+unsigned long AccCalc(float stepsPerSecPerSec) {
+//  float temp = stepsPerSecPerSec * 0.137438;
+  float temp = stepsPerSecPerSec * 0.068719476736;
   if( (unsigned long) long(temp) > 0x00000FFF) return 0x00000FFF;
-  else return (unsigned long) long(temp);
+  else return (unsigned long) long(temp + 0.5);
 }
 
 // The calculation for DEC is the same as for ACC. Value is 0x08A on boot.
 // This is a 12-bit value, so we need to make sure the value is at or below 0xFFF.
-unsigned long DecCalc(float stepsPerSecPerSec)
-{
-  float temp = stepsPerSecPerSec * 0.137438;
+// Changed constant to 0.068719476736 after post on sparkfun site by Nick Gammon
+unsigned long DecCalc(float stepsPerSecPerSec) {
+  //float temp = stepsPerSecPerSec * 0.137438;
+  float temp = stepsPerSecPerSec * 0.068719476736;
   if( (unsigned long) long(temp) > 0x00000FFF) return 0x00000FFF;
-  else return (unsigned long) long(temp);
+  else return (unsigned long) long(temp + 0.5);
 }
 
 // The value in the MAX_SPD register is [(steps/s)*(tick)]/(2^-18) where tick is 
@@ -37,7 +39,7 @@ unsigned long MaxSpdCalc(float stepsPerSec)
 {
   float temp = stepsPerSec * .065536;
   if( (unsigned long) long(temp) > 0x000003FF) return 0x000003FF;
-  else return (unsigned long) long(temp);
+  else return (unsigned long) long(temp + 0.5);
 }
 
 // The value in the Max Run Speed parameter is [(steps/s)*(tick)]/(2^-28) where tick is 
@@ -48,7 +50,7 @@ unsigned long MaxRunSpdCalc(float stepsPerSec)
 {
   float temp = stepsPerSec * 67.108864;
   if( (unsigned long) long(temp) > 0x0003FFFF) return 0x0003FFFF;
-  else return (unsigned long) long(temp);
+  else return (unsigned long) long(temp + 0.5);
 }
 
 
@@ -60,7 +62,7 @@ unsigned long MinSpdCalc(float stepsPerSec)
 {
   float temp = stepsPerSec * 4.1943;
   if( (unsigned long) long(temp) > 0x00000FFF) return 0x00000FFF;
-  else return (unsigned long) long(temp);
+  else return (unsigned long) long(temp + 0.5);
 }
 
 // The value in the FS_SPD register is ([(steps/s)*(tick)]/(2^-18))-0.5 where tick is 
@@ -564,6 +566,7 @@ void dSPIN_ParamHandler_All(byte param, unsigned long value[], unsigned long ret
     //  the bits in the register.
     case dSPIN_STATUS:  // STATUS is a read-only register
       //unsigned long zero_array[MOTOR_COUNT];
+      //    ret_val = dSPIN_Param(device, 0, 16);
       dSPIN_Param_All(zero_array, ret_val, 16);
       break;
     default:
@@ -693,6 +696,7 @@ void dSPIN_Run_All(byte dir[], unsigned long spd[]) {
 //  the direction (set by the FWD and REV constants) imposed by the call
 //  of this function. Motion commands (RUN, MOVE, etc) will cause the device
 //  to exit step clocking mode.
+
 void dSPIN_Step_Clock(int device, byte dir) {
   dSPIN_Xfer(device, dSPIN_STEP_CLOCK | dir);
 }
@@ -865,9 +869,11 @@ unsigned int dSPIN_GetStatus(int device) {
   return temp;
 }
 
-byte getStatus_temp[MOTOR_COUNT];
+
 void dSPIN_GetStatus_All(unsigned int result[]) {
   byte send_value[MOTOR_COUNT];
+  byte getStatus_temp[MOTOR_COUNT];
+  
   for(int i = 0; i < MOTOR_COUNT; i++) {
     send_value[i] = dSPIN_GET_STATUS;
   }
@@ -1025,20 +1031,21 @@ void dSPIN_setup()
   //  passed to this function is in steps/tick; MaxSpdCalc() will convert a number of
   //  steps/s into an appropriate value for this function. Note that for any move or
   //  goto type function where no speed is specified, this value will be used.
-  dSPIN_SetParam(MOTOR_X, dSPIN_MAX_SPEED, MaxSpdCalc(5000)); // Max speed is written for every move. So the figure here doesn't matter
-  dSPIN_SetParam(MOTOR_Y, dSPIN_MAX_SPEED, MaxSpdCalc(5000));
-  dSPIN_SetParam(MOTOR_Z, dSPIN_MAX_SPEED, MaxSpdCalc(5000));
-  dSPIN_SetParam(MOTOR_E, dSPIN_MAX_SPEED, MaxSpdCalc(5000));
+  dSPIN_SetParam(MOTOR_X, dSPIN_MAX_SPEED, MaxSpdCalc(15000)); // Max speed is written for every move. So the figure here doesn't matter
+  dSPIN_SetParam(MOTOR_Y, dSPIN_MAX_SPEED, MaxSpdCalc(15000));
+  dSPIN_SetParam(MOTOR_Z, dSPIN_MAX_SPEED, MaxSpdCalc(15000));
+  dSPIN_SetParam(MOTOR_E, dSPIN_MAX_SPEED, MaxSpdCalc(15000));
 
-  /* Causes tricky issues to solve, beware
-  float axis_steps_per_unit[]=DEFAULT_AXIS_STEPS_PER_UNIT;
+  /* 
+  float axis_steps_per_unit[] = DEFAULT_AXIS_STEPS_PER_UNIT;
   dSPIN_SetParam(MOTOR_X, dSPIN_MIN_SPEED, MinSpdCalc(DEFAULT_XYJERK * axis_steps_per_unit[MOTOR_X]));
   dSPIN_SetParam(MOTOR_Y, dSPIN_MIN_SPEED, MinSpdCalc(DEFAULT_XYJERK * axis_steps_per_unit[MOTOR_Y]));
   dSPIN_SetParam(MOTOR_Z, dSPIN_MIN_SPEED, MinSpdCalc(DEFAULT_ZJERK * axis_steps_per_unit[MOTOR_Z]));
   dSPIN_SetParam(MOTOR_E, dSPIN_MIN_SPEED, MinSpdCalc(DEFAULT_EJERK * axis_steps_per_unit[MOTOR_E]));
-  */
+   */
   
-  dSPIN_SetParam(MOTOR_X, dSPIN_MIN_SPEED, MinSpdCalc(0));
+  
+  dSPIN_SetParam(MOTOR_X, dSPIN_MIN_SPEED, MinSpdCalc(0)); // Min speed is written for every move. So the figure here doesn't matter
   dSPIN_SetParam(MOTOR_Y, dSPIN_MIN_SPEED, MinSpdCalc(0));
   dSPIN_SetParam(MOTOR_Z, dSPIN_MIN_SPEED, MinSpdCalc(0));
   dSPIN_SetParam(MOTOR_E, dSPIN_MIN_SPEED, MinSpdCalc(0));
@@ -1102,7 +1109,7 @@ void dSPIN_setup()
 //                 | dSPIN_CONFIG_OC_SD_DISABLE | dSPIN_CONFIG_VS_COMP_DISABLE
                  | dSPIN_CONFIG_SW_HARD_STOP | dSPIN_CONFIG_INT_16MHZ);
   dSPIN_SetParam(MOTOR_E, dSPIN_CONFIG, 
-                   dSPIN_CONFIG_PWM_DIV_1 | dSPIN_CONFIG_PWM_MUL_2 | dSPIN_CONFIG_SR_530V_us
+                   dSPIN_CONFIG_PWM_DIV_1 | dSPIN_CONFIG_PWM_MUL_2 | dSPIN_CONFIG_SR_290V_us
     //             | dSPIN_CONFIG_OC_SD_DISABLE | dSPIN_CONFIG_VS_COMP_DISABLE 
                  | dSPIN_CONFIG_SW_HARD_STOP | dSPIN_CONFIG_INT_16MHZ);
   // Configure the RUN KVAL. This defines the duty cycle of the PWM of the bridges
@@ -1125,8 +1132,8 @@ void dSPIN_setup()
 //  dSPIN_SetParam(dSPIN_FN_SLP_ACC, 0xb);  //0xb
 //  dSPIN_SetParam(dSPIN_FN_SLP_DEC, 0xb);  //0xb
 
-  dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_HOLD, 0x28);  //0xa
-  dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_ACC, 0x3b);  // 0xb
+  dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_HOLD, 0x20);  //0xa
+  dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_ACC, 0x38);  // 0xb
   dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_DEC, 0x34);  // 0xb
   dSPIN_SetParam(MOTOR_X, dSPIN_KVAL_RUN, 0x28);  // 0xb
   dSPIN_SetParam(MOTOR_X, dSPIN_ST_SLP, 0x6);     // 0x5
@@ -1134,14 +1141,35 @@ void dSPIN_setup()
   dSPIN_SetParam(MOTOR_X, dSPIN_FN_SLP_ACC, 0x1d);  //0xb
   dSPIN_SetParam(MOTOR_X, dSPIN_FN_SLP_DEC, 0x1d);  //0xb
 
-  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_HOLD, 0x30);  //0xa
-  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_ACC, 0x3b);  // 0xb
+  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_HOLD, 0x20);  //0xa
+  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_ACC, 0x38);  // 0xb
   dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_DEC, 0x34);  // 0xb
-  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_RUN, 0x30);  // 0xb
+  dSPIN_SetParam(MOTOR_Y, dSPIN_KVAL_RUN, 0x28;  // 0xb
   dSPIN_SetParam(MOTOR_Y, dSPIN_ST_SLP, 0x6);     // 0x5
   dSPIN_SetParam(MOTOR_Y, dSPIN_INT_SPD, 0x165a);  // this should be 0x1c50 according to bemf cacl
   dSPIN_SetParam(MOTOR_Y, dSPIN_FN_SLP_ACC, 0x1d);  //0xb
   dSPIN_SetParam(MOTOR_Y, dSPIN_FN_SLP_DEC, 0x1d);  //0xb
+// Serial connection 
+  dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_HOLD, 0x18);  //0x20
+  dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_ACC, 0x5b);  // 0x5b
+  dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_DEC, 0x5b);  // 0x5b
+  dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_RUN, 0x5b);  // 0x5b
+  dSPIN_SetParam(MOTOR_Z, dSPIN_ST_SLP, 0x9);     // 0x9
+  dSPIN_SetParam(MOTOR_Z, dSPIN_INT_SPD, 0x165a);  // this should be 0x1651 according to bemf cacl
+  dSPIN_SetParam(MOTOR_Z, dSPIN_FN_SLP_ACC, 0x4d);  //0x4d
+  dSPIN_SetParam(MOTOR_Z, dSPIN_FN_SLP_DEC, 0x4d);  //0x4d
+  
+  
+  dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_HOLD, 0x20);  // 0xa
+  dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_ACC, 0x3f);  // 0xb
+  dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_DEC, 0x28);  // 0xb
+  dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_RUN, 0x38);  // 0xb
+  dSPIN_SetParam(MOTOR_E, dSPIN_ST_SLP, 0x6);     // 0x5
+  dSPIN_SetParam(MOTOR_E, dSPIN_INT_SPD, 0x1651);  // this should be 0x1c50 according to bemf cacl
+  dSPIN_SetParam(MOTOR_E, dSPIN_FN_SLP_ACC, 0x1d);  //0xb
+  dSPIN_SetParam(MOTOR_E, dSPIN_FN_SLP_DEC, 0x1d);  //0xb
+  
+  
 /* Optimised for Parallel connection
   dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_HOLD, 0x18);  //0xa
   dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_ACC, 0x20);  // 0xb
@@ -1163,16 +1191,8 @@ void dSPIN_setup()
   dSPIN_SetParam(MOTOR_Z, dSPIN_FN_SLP_ACC, 0x3c);  //0x3c
   dSPIN_SetParam(MOTOR_Z, dSPIN_FN_SLP_DEC, 0x3c);  //0x3c
 */  
-// Serial connection 
-  dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_HOLD, 0x20);  //0x20
-  dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_ACC, 0x5b);  // 0x5b
-  dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_DEC, 0x5b);  // 0x5b
-  dSPIN_SetParam(MOTOR_Z, dSPIN_KVAL_RUN, 0x5b);  // 0x5b
-  dSPIN_SetParam(MOTOR_Z, dSPIN_ST_SLP, 0x9);     // 0x9
-  dSPIN_SetParam(MOTOR_Z, dSPIN_INT_SPD, 0x165a);  // this should be 0x1651 according to bemf cacl
-  dSPIN_SetParam(MOTOR_Z, dSPIN_FN_SLP_ACC, 0x4d);  //0x4d
-  dSPIN_SetParam(MOTOR_Z, dSPIN_FN_SLP_DEC, 0x4d);  //0x4d
-
+  
+/* Working but runs hot Mecury Motor 
   dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_HOLD, 0x30);  // 0x23
   dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_ACC, 0xd0);  // 0xc5
   dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_DEC, 0xc5);  // 0xc5
@@ -1181,12 +1201,23 @@ void dSPIN_setup()
   dSPIN_SetParam(MOTOR_E, dSPIN_INT_SPD, 0x1c56);  // this should be 0x1c56 according to bemf cacl
   dSPIN_SetParam(MOTOR_E, dSPIN_FN_SLP_ACC, 0x79);  //0x79
   dSPIN_SetParam(MOTOR_E, dSPIN_FN_SLP_DEC, 0x79);  //0x79
+ *. 
+/* Settings for Mercury Motor */
+/*  dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_HOLD, 0x80);  // 0x23
+  dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_ACC, 0xc0);  // 0xc5
+  dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_DEC, 0xbc);  // 0xc5
+  dSPIN_SetParam(MOTOR_E, dSPIN_KVAL_RUN, 0xd0);  // 0xc5
+  dSPIN_SetParam(MOTOR_E, dSPIN_ST_SLP, 0x5);     // 0x5
+  dSPIN_SetParam(MOTOR_E, dSPIN_INT_SPD, 0x1c56);  // this should be 0x1c56 according to bemf cacl
+  dSPIN_SetParam(MOTOR_E, dSPIN_FN_SLP_ACC, 0x79);  //0x79
+  dSPIN_SetParam(MOTOR_E, dSPIN_FN_SLP_DEC, 0x79);  //0x79
+*/
 
   // Thermal compensation for motor heating
-  dSPIN_SetParam(MOTOR_X, dSPIN_K_THERM, 0x2);  
-  dSPIN_SetParam(MOTOR_Y, dSPIN_K_THERM, 0x2);  
-  dSPIN_SetParam(MOTOR_Z, dSPIN_K_THERM, 0x2);  
-  dSPIN_SetParam(MOTOR_E, dSPIN_K_THERM, 0x2);  
+  //dSPIN_SetParam(MOTOR_X, dSPIN_K_THERM, 0x2);  
+  //dSPIN_SetParam(MOTOR_Y, dSPIN_K_THERM, 0x2);  
+  //dSPIN_SetParam(MOTOR_Z, dSPIN_K_THERM, 0x2);  
+  //dSPIN_SetParam(MOTOR_E, dSPIN_K_THERM, 0x2);  
   
   /*
   dSPIN_Step_Clock(MOTOR_X, 0);

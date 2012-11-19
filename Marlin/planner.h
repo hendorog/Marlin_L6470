@@ -55,11 +55,13 @@ typedef struct {
   unsigned char nominal_length_flag;                 // Planner flag for nominal speed always reached
 
   // Settings for the trapezoid generator
-  unsigned long rate_x, rate_y, rate_z, rate_e;		     // Nominal steps/sec for each axis
+  float rate_x, rate_y, rate_z, rate_e;		     // Nominal steps/sec for each axis
   unsigned long nominal_rate;                        // The nominal step rate for this block in step_events/sec 
   unsigned long initial_rate;                        // The jerk-adjusted step rate at start of block  
+  unsigned long initial_rate_x, initial_rate_y, initial_rate_z, initial_rate_e;		     // Block Entry rate in steps/sec for each axis
   unsigned long final_rate;                          // The minimal rate at exit
-  unsigned long accel_x, accel_y, accel_z, accel_e;  // Nominal acceleration steps/sec^2 for each axis
+  unsigned long final_rate_x, final_rate_y, final_rate_z, final_rate_e;		     // Block Exit rate in steps/sec for each axis
+  float accel_x, accel_y, accel_z, accel_e;  // Nominal acceleration steps/sec^2 for each axis
   unsigned long acceleration_st;                     // acceleration steps/sec^2
   unsigned long fan_speed;
   volatile char busy;
@@ -84,6 +86,7 @@ uint8_t movesplanned(); //return the nr of buffered moves
 extern unsigned long minsegmenttime;
 extern float max_feedrate[4]; // set the max speeds
 extern float axis_steps_per_unit[4];
+extern float axis_fullsteps_per_unit[4];
 extern unsigned long max_acceleration_units_per_sq_second[4]; // Use M201 to override by software
 extern float minimumfeedrate;
 extern float acceleration;         // Normal acceleration mm/s^2  THIS IS THE DEFAULT ACCELERATION for all moves. M204 SXXXX

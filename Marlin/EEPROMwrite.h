@@ -196,11 +196,13 @@ inline void EEPROM_RetrieveSettings(bool def=false)
       float tmp1[]=DEFAULT_AXIS_STEPS_PER_UNIT;
       float tmp2[]=DEFAULT_MAX_FEEDRATE;
       long tmp3[]=DEFAULT_MAX_ACCELERATION;
+      float tmp4[]=DEFAULT_AXIS_FULLSTEPS_PER_UNIT;      
       for (short i=0;i<4;i++) 
       {
         axis_steps_per_unit[i]=tmp1[i];  
         max_feedrate[i]=tmp2[i];  
         max_acceleration_units_per_sq_second[i]=tmp3[i];
+        axis_fullsteps_per_unit[i]=tmp4[i];        
       }
       acceleration=DEFAULT_ACCELERATION;
       retract_acceleration=DEFAULT_RETRACT_ACCELERATION;

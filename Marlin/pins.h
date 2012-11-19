@@ -378,29 +378,29 @@
 // Anything set to -1 as an input is disabled
 // Pin 6 is used as an dummy pin for th L6470 enables and directions. These must be specified it seems. Make sure pin 6 isn't used anywhere else.
 
-#define X_STEP_PIN         4 // 1 
-#define X_DIR_PIN          6 // Not needed - L6470
+#define X_STEP_PIN         -1 //4 // 1 
+#define X_DIR_PIN          -1 // Not needed - L6470
 #define X_ENABLE_PIN        6//5 // 2 (M1 STBY)
 #define X_L6470_RESET_PIN  5
 #define X_MIN_PIN           2 // 3 (M1 HOME SWITCH)
 #define X_MAX_PIN          -1 // Not needed - one home switch   //2
 
-#define Y_STEP_PIN         12 // 4
-#define Y_DIR_PIN          6 // Not needed - L6470
+#define Y_STEP_PIN         -1//12 // 4
+#define Y_DIR_PIN          -1 // Not needed - L6470
 #define Y_ENABLE_PIN       6 // 11 // 5 (M2 STBY)
 #define Y_L6470_RESET_PIN  11
 #define Y_MIN_PIN          3 // 3 (M2 HOME SWITCH)
 #define Y_MAX_PIN          -1 // Not needed - one home switch   //17
 
-#define Z_STEP_PIN         18 // 7
-#define Z_DIR_PIN          6 // Not needed - L6470
+#define Z_STEP_PIN         -1 //18 // 7
+#define Z_DIR_PIN          -1 //6 // Not needed - L6470
 #define Z_ENABLE_PIN       6 //19 // 8 (M3 STBY)
 #define Z_L6470_RESET_PIN  19
 #define Z_MIN_PIN          9 // 9 (M3 HOME SWITCH)
 #define Z_MAX_PIN          -1 // Not needed - one home switch   //19
 
-#define E0_STEP_PIN         14 // 10 (M4 STEP) EasyStepper/Pololu
-#define E0_DIR_PIN          16 // 11 (M4 DIR) EasyStepper/Pololu
+#define E0_STEP_PIN         -1//14 // 10 (M4 STEP) EasyStepper/Pololu
+#define E0_DIR_PIN          -1//16 // 11 (M4 DIR) EasyStepper/Pololu
 #define E0_ENABLE_PIN       8 // 12 (M4 ENABLE) EasyStepper/Pololu
 
 #define E1_STEP_PIN         -1
@@ -411,7 +411,7 @@
 #define E2_ENABLE_PIN       -1
 
 #define SDPOWER            -1 // Not needed - No SDCard
-#define SDSS               -1 // Not needed - No SDCard
+#define SDSS               4 // Not needed - No SDCard
 #define LED_PIN            13
 #define PS_ON_PIN          -1
 #define KILL_PIN           -1

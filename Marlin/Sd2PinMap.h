@@ -44,7 +44,7 @@ uint8_t const SCL_PIN = 21;  // D0
 #undef MOSI_PIN
 #undef MISO_PIN
 // SPI port
-uint8_t const SS_PIN = 53;    // B0
+uint8_t const SS_PIN = 4;//53;    // B0
 uint8_t const MOSI_PIN = 51;  // B2
 uint8_t const MISO_PIN = 50;  // B3
 uint8_t const SCK_PIN = 52;   // B1

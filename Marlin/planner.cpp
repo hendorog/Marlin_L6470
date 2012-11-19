@@ -65,6 +65,7 @@
 unsigned long minsegmenttime;
 float max_feedrate[4]; // set the max speeds
 float axis_steps_per_unit[4];
+float axis_fullsteps_per_unit[4];
 unsigned long max_acceleration_units_per_sq_second[4]; // Use M201 to override by software
 float minimumfeedrate;
 float acceleration;         // Normal acceleration mm/s^2  THIS IS THE DEFAULT ACCELERATION for all moves. M204 SXXXX
@@ -171,12 +172,15 @@ void calculate_trapezoid_for_block(block_t *block, float entry_factor, float exi
   unsigned long final_rate = ceil(block->nominal_rate*exit_factor); // (step/min)
 
   // Limit minimal step rate (Otherwise the timer will overflow.)
-  if(initial_rate <120) {
+ /* Removed as L6470 doesn't use timer
+
+   if(initial_rate <120) {
     initial_rate=120; 
   }
   if(final_rate < 120) {
     final_rate=120;  
   }
+  */
 
   long acceleration = block->acceleration_st;
   int32_t accelerate_steps =
@@ -211,6 +215,18 @@ void calculate_trapezoid_for_block(block_t *block, float entry_factor, float exi
     block->decelerate_after = accelerate_steps+plateau_steps;
     block->initial_rate = initial_rate;
     block->final_rate = final_rate;
+            
+    // Initial and final speeds per axis in steps/sec.  (I think...) Used for L6470
+    block->initial_rate_x = block->initial_rate * block->steps_x/block->step_event_count;
+    block->initial_rate_y = block->initial_rate * block->steps_y/block->step_event_count;
+    block->initial_rate_z = block->initial_rate * block->steps_z/block->step_event_count;
+    block->initial_rate_e = block->initial_rate * block->steps_e/block->step_event_count;
+  
+    block->final_rate_x = block->final_rate * block->steps_x/block->step_event_count;
+    block->final_rate_y = block->final_rate * block->steps_y/block->step_event_count;
+    block->final_rate_z = block->final_rate * block->steps_z/block->step_event_count;
+    block->final_rate_e = block->final_rate * block->steps_e/block->step_event_count;  
+    
 #ifdef ADVANCE
     block->initial_advance = initial_advance;
     block->final_advance = final_advance;
@@ -550,7 +566,8 @@ void plan_buffer_line(const float &x, const float &y, const float &z, const floa
   block->steps_e *= extrudemultiply;
   block->steps_e /= 100;
   block->step_event_count = max(block->steps_x, max(block->steps_y, max(block->steps_z, block->steps_e)));
-
+  unsigned long direct_step_count = sqrt(square(block->steps_x) + square(block->steps_y) + square(block->steps_z) + square(block->steps_e));
+  
   // Bail if this is a zero-length block
   if (block->step_event_count <= dropsegments) { 
     return; 
@@ -633,10 +650,12 @@ void plan_buffer_line(const float &x, const float &y, const float &z, const floa
 
   block->nominal_speed = block->millimeters * inverse_second; // (mm/sec) Always > 0
   block->nominal_rate = ceil(block->step_event_count * inverse_second); // (step/sec) Always > 0
-
+  float direct_rate = (float)direct_step_count * inverse_second; // (step/sec) Always > 0
+  
   // Calculate and limit speed in mm/sec for each axis
   float current_speed[4];
   float speed_factor = 1.0; //factor <=1 do decrease speed
+  float direct_speed_factor = 1.0; //factor <=1 do decrease speed
   for(int i=0; i < 4; i++) {
     current_speed[i] = delta_mm[i] * inverse_second;
     if(fabs(current_speed[i]) > max_feedrate[i])
@@ -679,83 +698,33 @@ void plan_buffer_line(const float &x, const float &y, const float &z, const floa
       current_speed[i] *= speed_factor;
     }
     block->nominal_speed *= speed_factor;
-    block->nominal_rate *= speed_factor;
+    block->nominal_rate *= speed_factor; 
+    direct_rate *= speed_factor;
   }
   
-  // Axis speeds in steps/sec are needed by L6470 - nominal_rate has now been adjusted for max limits using speed_factor
-  block->rate_x = block->nominal_rate * block->steps_x/block->step_event_count;
-  block->rate_y = block->nominal_rate * block->steps_y/block->step_event_count;
-  block->rate_z = block->nominal_rate * block->steps_z/block->step_event_count;
-  block->rate_e = block->nominal_rate * block->steps_e/block->step_event_count;  
-
   // Compute and limit the acceleration rate for the trapezoid generator.  
   float steps_per_mm = block->step_event_count/block->millimeters;
+  float direct_steps_per_mm = direct_step_count/block->millimeters;
+
   if(block->steps_x == 0 && block->steps_y == 0 && block->steps_z == 0) {
     block->acceleration_st = ceil(retract_acceleration * steps_per_mm); // convert to: acceleration steps/sec^2
   }
   else {
     block->acceleration_st = ceil(acceleration * steps_per_mm); // convert to: acceleration steps/sec^2
     // Limit acceleration per axis
-    if(((float)block->acceleration_st * (float)block->steps_x / (float)block->step_event_count) > axis_steps_per_sqr_second[X_AXIS])
+    if(((float)block->acceleration_st * (float)block->steps_x / (float)direct_step_count) > axis_steps_per_sqr_second[X_AXIS])
       block->acceleration_st = axis_steps_per_sqr_second[X_AXIS];
-    if(((float)block->acceleration_st * (float)block->steps_y / (float)block->step_event_count) > axis_steps_per_sqr_second[Y_AXIS])
+    if(((float)block->acceleration_st * (float)block->steps_y / (float)direct_step_count) > axis_steps_per_sqr_second[Y_AXIS])
       block->acceleration_st = axis_steps_per_sqr_second[Y_AXIS];
-    if(((float)block->acceleration_st * (float)block->steps_e / (float)block->step_event_count) > axis_steps_per_sqr_second[E_AXIS])
+    if(((float)block->acceleration_st * (float)block->steps_e / (float)direct_step_count) > axis_steps_per_sqr_second[E_AXIS])
       block->acceleration_st = axis_steps_per_sqr_second[E_AXIS];
-    if(((float)block->acceleration_st * (float)block->steps_z / (float)block->step_event_count ) > axis_steps_per_sqr_second[Z_AXIS])
-      block->acceleration_st = axis_steps_per_sqr_second[Z_AXIS];
-      
+    if(((float)block->acceleration_st * (float)block->steps_z / (float)direct_step_count ) > axis_steps_per_sqr_second[Z_AXIS])
+      block->acceleration_st = axis_steps_per_sqr_second[Z_AXIS];      
   }
 
-  // Per Axis Acceleration is needed  for L6470
-  block->accel_x = ceil(((float)block->acceleration_st * (float)block->steps_x / (float)block->step_event_count));
-  block->accel_y = ceil(((float)block->acceleration_st * (float)block->steps_y / (float)block->step_event_count));
-  block->accel_z = ceil(((float)block->acceleration_st * (float)block->steps_z / (float)block->step_event_count));      
-  block->accel_e = ceil(((float)block->acceleration_st * (float)block->steps_e / (float)block->step_event_count));        
-  
   block->acceleration = block->acceleration_st / steps_per_mm;
   block->acceleration_rate = (long)((float)block->acceleration_st * 8.388608);
 
-#if 0  // Use old jerk for now
-  // Compute path unit vector
-  double unit_vec[3];
-
-  unit_vec[X_AXIS] = delta_mm[X_AXIS]*inverse_millimeters;
-  unit_vec[Y_AXIS] = delta_mm[Y_AXIS]*inverse_millimeters;
-  unit_vec[Z_AXIS] = delta_mm[Z_AXIS]*inverse_millimeters;
-
-  // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
-  // Let a circle be tangent to both previous and current path line segments, where the junction
-  // deviation is defined as the distance from the junction to the closest edge of the circle,
-  // colinear with the circle center. The circular segment joining the two paths represents the
-  // path of centripetal acceleration. Solve for max velocity based on max acceleration about the
-  // radius of the circle, defined indirectly by junction deviation. This may be also viewed as
-  // path width or max_jerk in the previous grbl version. This approach does not actually deviate
-  // from path, but used as a robust way to compute cornering speeds, as it takes into account the
-  // nonlinearities of both the junction angle and junction velocity.
-  double vmax_junction = MINIMUM_PLANNER_SPEED; // Set default max junction speed
-
-  // Skip first block or when previous_nominal_speed is used as a flag for homing and offset cycles.
-  if ((block_buffer_head != block_buffer_tail) && (previous_nominal_speed > 0.0)) {
-    // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
-    // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
-    double cos_theta = - previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
-      - previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
-      - previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
-
-    // Skip and use default max junction speed for 0 degree acute junction.
-    if (cos_theta < 0.95) {
-      vmax_junction = min(previous_nominal_speed,block->nominal_speed);
-      // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
-      if (cos_theta > -0.95) {
-        // Compute maximum junction velocity based on maximum acceleration and junction deviation
-        double sin_theta_d2 = sqrt(0.5*(1.0-cos_theta)); // Trig half angle identity. Always positive.
-        vmax_junction = min(vmax_junction,
-        sqrt(block->acceleration * junction_deviation * sin_theta_d2/(1.0-sin_theta_d2)) );
-      }
-    }
-  }
-#endif
   // Start with a safe speed
   float vmax_junction = max_xy_jerk/2; 
   float vmax_junction_factor = 1.0; 
@@ -809,6 +778,7 @@ void plan_buffer_line(const float &x, const float &y, const float &z, const floa
   previous_nominal_speed = block->nominal_speed;
 
 
+
 #ifdef ADVANCE
   // Calculate advance rate
   if((block->steps_e == 0) || (block->steps_x == 0 && block->steps_y == 0 && block->steps_z == 0)) {
@@ -836,8 +806,19 @@ void plan_buffer_line(const float &x, const float &y, const float &z, const floa
    */
 #endif // ADVANCE
 
-  calculate_trapezoid_for_block(block, block->entry_speed/block->nominal_speed,
-  safe_speed/block->nominal_speed);
+    // Axis speeds in steps/sec are needed by L6470 - nominal_rate has now been adjusted for max limits using speed_factor
+    block->rate_x = direct_rate * (float)block->steps_x/(float)direct_step_count * axis_fullsteps_per_unit[X_AXIS] / axis_steps_per_unit[X_AXIS];
+    block->rate_y = direct_rate * (float)block->steps_y/(float)direct_step_count * axis_fullsteps_per_unit[Y_AXIS] / axis_steps_per_unit[Y_AXIS];
+    block->rate_z = direct_rate * (float)block->steps_z/(float)direct_step_count * axis_fullsteps_per_unit[Z_AXIS] / axis_steps_per_unit[Z_AXIS];
+    block->rate_e = direct_rate * (float)block->steps_e/(float)direct_step_count * axis_fullsteps_per_unit[E_AXIS] / axis_steps_per_unit[E_AXIS];
+
+    // Per Axis Acceleration is needed  for L6470
+    block->accel_x = (float)block->acceleration_st * (float)block->steps_x / (float)direct_step_count * axis_fullsteps_per_unit[X_AXIS] / axis_steps_per_unit[X_AXIS];
+    block->accel_y = (float)block->acceleration_st * (float)block->steps_y / (float)direct_step_count * axis_fullsteps_per_unit[Y_AXIS] / axis_steps_per_unit[Y_AXIS];
+    block->accel_z = (float)block->acceleration_st * (float)block->steps_z / (float)direct_step_count * axis_fullsteps_per_unit[Z_AXIS] / axis_steps_per_unit[Z_AXIS];
+    block->accel_e = (float)block->acceleration_st * (float)block->steps_e / (float)direct_step_count * axis_fullsteps_per_unit[E_AXIS] / axis_steps_per_unit[E_AXIS];
+
+  calculate_trapezoid_for_block(block, block->entry_speed/block->nominal_speed,  safe_speed/block->nominal_speed);
 
   // Move buffer head
   block_buffer_head = next_buffer_head;

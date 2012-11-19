@@ -309,7 +309,7 @@ void dSPIN_SetParam_All(byte param, unsigned long value[], unsigned long result[
 void dSPIN_GetParam_All(byte param, unsigned long result[]);
 void dSPIN_Move_All(byte dir[], unsigned long n_step[]);
 void dSPIN_GetStatus_All(unsigned int result[]);
-void dSPIN_Run_All(byte dir[], unsigned long spd[]);
+//void dSPIN_Run_All(byte dir[], unsigned long spd[]);
 void dSPIN_SoftStop_All();
 
 unsigned long AccCalc(float stepsPerSecPerSec);

@@ -1205,7 +1205,7 @@ void dSPIN_monitorStatus() {
 					SERIAL_ECHOLN("dSPIN_STATUS_SW_F is active");
 #endif
 
-					if (L6470_status[device] & dSPIN_STATUS_DIR) { //  and we are trying to Move in reverse deeper into the endstop (note that this currently assumes axis are not reversed!!)
+					if (L6470_status[device] & !dSPIN_STATUS_DIR) { //  and we are trying to Move in reverse deeper into the endstop (note that this currently assumes axis are not reversed!!)
 
 						dSPIN_HardStop(device);
 						dSPIN_ResetPos(device);
